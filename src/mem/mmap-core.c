@@ -11,7 +11,10 @@
 #include <string.h>
 #include <errno.h>
 #include <pthread.h>
+
+#if ! defined __MINGW32__
 #include <sys/mman.h>
+#endif
 
 #include "mmap-core.h"
 
