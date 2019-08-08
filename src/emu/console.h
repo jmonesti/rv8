@@ -9,6 +9,8 @@ namespace riscv {
 
 	/* Console Thread */
 
+#if ! defined __MINGW32__
+
 	template <typename P>
 	struct console_device
 	{
@@ -88,6 +90,7 @@ namespace riscv {
 				process_output();
 				if (!running) break;
 				if (suspended) continue;
+
 				process_input();
 			}
 			restore_console();
@@ -201,6 +204,45 @@ namespace riscv {
 			}
 		}
 	};
+
+#else
+
+	template <typename P>
+	struct console_device
+	{
+		console_device(P &proc) {}
+
+		~console_device() {}
+
+		/* suspend console input */
+		void suspend()
+		{
+		}
+
+		/* resume console input */
+		void resume()
+		{
+		}
+
+		/* check if data is available */
+		bool has_char()
+		{
+			return false;
+		}
+
+		/* read one character */
+		u8 read_char()
+		{
+			return 0;
+		}
+
+		/* write one character */
+		void write_char(u8 c)
+		{
+		}
+	};
+
+#endif
 
 }
 
