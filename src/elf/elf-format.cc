@@ -357,7 +357,7 @@ void elf_print_relocations(elf_file &elf, elf_symbol_colorize_fn colorize)
 {
 	if (elf.rela_text == 0) return;
 
-	printf("%sSection[%2lu] %-111s%s\n", colorize("title"),
+	printf("%sSection[%2zu] %-111s%s\n", colorize("title"),
 		elf.rela_text, elf.shdr_name(elf.rela_text), colorize("reset"));
 
 	printf("\n%sReloc  %-18s %-20s %-30s %-18s%s\n",
@@ -368,7 +368,7 @@ void elf_print_relocations(elf_file &elf, elf_symbol_colorize_fn colorize)
 	for (auto &rela : elf.relocations) {
 		Elf64_Xword sym = ELF64_R_SYM(rela.r_info);
 		Elf64_Xword type = ELF64_R_TYPE(rela.r_info);
-		printf("%s[%4lu]%s %s0x%-16llx%s %-20s %-30s %s0x%-16llx%s\n",
+		printf("%s[%4zu]%s %s0x%-16llx%s %-20s %-30s %s0x%-16llx%s\n",
 			colorize("legend"),
 			j++,
 			colorize("reset"),

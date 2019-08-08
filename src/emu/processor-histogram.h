@@ -49,7 +49,7 @@ namespace riscv {
 
 		size_t i = 0;
 		for (auto ent : hist_pc_s) {
-			printf("%5lu. 0x%016llx %5.2f%% [%-9lu] %s\n",
+			printf("%5zu. 0x%016llx %5.2f%% [%-9zu] %s\n",
 				++i,
 				ent.first,
 				(float)ent.second / (float)total * 100.0f,
@@ -77,7 +77,7 @@ namespace riscv {
 		}
 		fprintf(file, "pc\tcount\n");
 		for (auto ent : hist_pc_s) {
-			fprintf(file, "0x%016llx\t%lu\n",
+			fprintf(file, "0x%016llx\t%zu\n",
 				ent.first, ent.second);
 		}
 		fclose(file);
@@ -100,7 +100,7 @@ namespace riscv {
 
 		size_t i = 0;
 		for (auto ent : hist_reg_s) {
-			printf("%5lu. %-10s %5.2f%% [%-9lu] %s\n",
+			printf("%5zu. %-10s %5.2f%% [%-9zu] %s\n",
 				++i,
 				ent.first < 32 ?
 					rv_ireg_name_sym[ent.first] :
@@ -131,7 +131,7 @@ namespace riscv {
 		}
 		fprintf(file, "register\tcount\n");
 		for (auto ent : hist_reg_s) {
-			fprintf(file, "%s\t%lu\n",
+			fprintf(file, "%s\t%zu\n",
 				ent.first < 32 ?
 					rv_ireg_name_sym[ent.first] :
 					rv_freg_name_sym[ent.first - 32],
@@ -157,7 +157,7 @@ namespace riscv {
 
 		size_t i = 0;
 		for (auto ent : hist_inst_s) {
-			printf("%5lu. %-10s %5.2f%% [%-9lu] %s\n",
+			printf("%5zu. %-10s %5.2f%% [%-9zu] %s\n",
 				++i,
 				rv_inst_name_sym[ent.first],
 				(float)ent.second / (float)total * 100.0f,
@@ -185,7 +185,7 @@ namespace riscv {
 		}
 		fprintf(file, "opcode\tcount\n");
 		for (auto ent : hist_inst_s) {
-			fprintf(file, "%s\t%lu\n",
+			fprintf(file, "%s\t%zu\n",
 				rv_inst_name_sym[ent.first], ent.second);
 		}
 		fclose(file);

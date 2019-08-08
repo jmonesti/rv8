@@ -173,7 +173,7 @@ struct rv_parse_elf
 			Elf64_Shdr &shdr = elf.shdrs[i];
 			if (shdr.sh_flags & SHF_EXECINSTR) {
 				addr_t offset = (addr_t)elf.sections[i].buf.data();
-				printf("%sSection[%2lu] %-111s%s\n", colorize("title"), i, elf.shdr_name(i), colorize("reset"));
+				printf("%sSection[%2zu] %-111s%s\n", colorize("title"), i, elf.shdr_name(i), colorize("reset"));
 				scan_continuations(offset, offset + shdr.sh_size, offset - shdr.sh_addr);
 				print_disassembly(offset, offset + shdr.sh_size, offset- shdr.sh_addr,
 					addr_t(gp_sym ? gp_sym->st_value : 0));
