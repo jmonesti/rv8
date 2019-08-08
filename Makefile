@@ -393,6 +393,16 @@ MMAP_LINUX_SRCS =   $(SRC_DIR)/mem/mmap-linux.c $(SRC_DIR)/mem/mmap-core.c
 MMAP_LINUX_OBJS =   $(call cc_src_objs, $(MMAP_LINUX_SRCS))
 MMAP_LINUX_LIB =    $(LIB_DIR)/mmap-linux.so
 
+# mmap-win64
+MMAP_WIN64_LDFLAGS = \
+	-shared -fPIC \
+	-Wl,-soname,mmap-win64.so \
+	-Wl,-Ttext-segment=0x7ffe80000000 \
+	-Wl,-rpath,$(DEST_DIR)/lib/mmap-win64.so
+MMAP_WIN64_SRCS =   $(SRC_DIR)/mem/mmap-win64.c $(SRC_DIR)/mem/mmap-core.c
+MMAP_WIN64_OBJS =   $(call cc_src_objs, $(MMAP_WIN64_SRCS))
+MMAP_WIN64_LIB =    $(LIB_DIR)/mmap-win64.so
+
 # mmap-macos
 MMAP_MACOS_LDFLAGS = \
 	-dynamiclib -fPIC \
@@ -620,9 +630,17 @@ MMAP_LIB = $(MMAP_LINUX_LIB)
 MMAP_FLAGS = -Wl,-rpath,$(DEST_DIR)/lib
 endif
 
+ifeq ($(ARCH),cygwin_nt-6.1_x86_64)
+MMAP_LIB = $(MMAP_WIN64_LIB)
+MMAP_FLAGS = -Wl,-rpath,$(DEST_DIR)/lib
+MMAP_FLAGS = -Wl,-rpath,.
+endif
+
 $(MMAP_MACOS_OBJS): CFLAGS += -fPIC
 
 $(MMAP_LINUX_OBJS): CFLAGS += -fPIC
+
+$(MMAP_WIN64_OBJS): CFLAGS += -fPIC
 
 $(MMAP_MACOS_LIB): $(MMAP_MACOS_OBJS)
 	@mkdir -p $(@D) ;
@@ -631,6 +649,10 @@ $(MMAP_MACOS_LIB): $(MMAP_MACOS_OBJS)
 $(MMAP_LINUX_LIB): $(MMAP_LINUX_OBJS)
 	@mkdir -p $(@D) ;
 	$(call cmd, SOLIB $@, $(CC) $(MMAP_LINUX_LDFLAGS) -o $@ $^ -ldl)
+
+$(MMAP_WIN64_LIB): $(MMAP_WIN64_OBJS)
+	@mkdir -p $(@D) ;
+	$(call cmd, SOLIB $@, $(CC) $(MMAP_WIN64_LDFLAGS) -o $@ $^)
 
 # binary targets
 
