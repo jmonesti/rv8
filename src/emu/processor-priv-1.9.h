@@ -258,7 +258,6 @@ namespace riscv {
 		std::shared_ptr<string_mmio_device<processor_privileged>> device_string;
 
 		u64 intr_sleep_time, intr_powerdown_delay;
-		std::vector<struct pollfd> pollfds;
 
 		std::mutex intr_mutex;
 		std::condition_variable intr_cond;
@@ -274,7 +273,7 @@ namespace riscv {
 		const u64 POWERDOWN_DELAY_DEFAULT = 10000;
 		const u64 POWERDOWN_SLEEP_DEFAULT = 1000000;
 
-		processor_privileged() : intr_sleep_time(0), intr_powerdown_delay(1000), pollfds() {}
+		processor_privileged() : intr_sleep_time(0), intr_powerdown_delay(1000) {}
 
 		u64 get_time()
 		{
