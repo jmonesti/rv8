@@ -1319,7 +1319,7 @@ const int dense_hashtable<V,K,HF,ExK,SetK,EqK,A>::HT_OCCUPANCY_PCT = 50;
 // It should be less than OCCUPANCY_PCT / 2 or we thrash resizing.
 template <class V, class K, class HF, class ExK, class SetK, class EqK, class A>
 const int dense_hashtable<V,K,HF,ExK,SetK,EqK,A>::HT_EMPTY_PCT
-  = static_cast<int>(0.4 *
+  = static_cast<int>(0.5f *
                      dense_hashtable<V,K,HF,ExK,SetK,EqK,A>::HT_OCCUPANCY_PCT);
 
 _END_GOOGLE_NAMESPACE_
