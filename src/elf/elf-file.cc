@@ -150,7 +150,7 @@ void elf_file::load(std::string filename, elf_load load_type)
 
 	// open file
 	this->filename = filename;
-	file = fopen(filename.c_str(), "r");
+	file = fopen(filename.c_str(), "rb");
 	if (!file) {
 		panic("error fopen: %s: %s", filename.c_str(), strerror(errno));
 	}
