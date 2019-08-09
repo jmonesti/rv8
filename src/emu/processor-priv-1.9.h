@@ -989,6 +989,7 @@ core {
 			if (signum == SIGINT) {
 				P::raise(P::internal_cause_cli, P::pc);
 			}
+#if ! defined __MINGW32__
 			if (signum == SIGHUP) {
 				auto epc = P::pc;
 				reset();
@@ -997,6 +998,7 @@ core {
 			if (signum == SIGUSR1) {
 				print_device_registers();
 			}
+#endif
 			if (signum == SIGTERM) {
 				P::raise(P::internal_cause_poweroff, P::pc);
 			} else {

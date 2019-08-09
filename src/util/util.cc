@@ -81,17 +81,19 @@ void debug(const char* fmt, ...)
 const char* signal_name(int signum)
 {
 	switch (signum) {
+#if ! defined __MINGW32__
 		case SIGHUP: return "SIGHUP";
-		case SIGINT: return "SIGINT";
 		case SIGQUIT: return "SIGQUIT";
+		case SIGPIPE: return "SIGPIPE";
+		case SIGUSR1: return "SIGUSR1";
+		case SIGUSR2: return "SIGUSR2";
+#endif
+		case SIGINT: return "SIGINT";
 		case SIGILL: return "SIGILL";
 		case SIGABRT: return "SIGABRT";
 		case SIGFPE: return "SIGFPE";
 		case SIGSEGV: return "SIGSEGV";
-		case SIGPIPE: return "SIGPIPE";
 		case SIGTERM: return "SIGTERM";
-		case SIGUSR1: return "SIGUSR1";
-		case SIGUSR2: return "SIGUSR2";
 		default: break;
 	}
 	return "SIG?";

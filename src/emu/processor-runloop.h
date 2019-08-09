@@ -44,7 +44,13 @@ namespace riscv {
 		void signal_dispatch(int signum, siginfo_t *info)
 		{
 			printf("SIGNAL   :%s pc:0x%0llx si_addr:0x%0llx\n",
-				signal_name(signum), (addr_t)P::pc, (addr_t)info->si_addr);
+				signal_name(signum), (addr_t)P::pc,
+#if ! defined __MINGW32__
+				(addr_t)info->si_addr
+#else
+				(addr_t)0ULL
+#endif
+				);
 
 			/* let the processor longjmp */
 			P::signal(signum, info);
@@ -52,6 +58,7 @@ namespace riscv {
 
 		void init()
 		{
+#if ! defined __MINGW32__
 			// block signals before so we don't deadlock in signal handlers
 			sigset_t set;
 			sigemptyset(&set);
@@ -82,12 +89,15 @@ namespace riscv {
 			sigaction(SIGINT, &sigaction_handler, nullptr);
 			sigaction(SIGHUP, &sigaction_handler, nullptr);
 			sigaction(SIGUSR1, &sigaction_handler, nullptr);
+#endif
 			processor_singleton::current = this;
 
+#if ! defined __MINGW32__
 			/* unblock signals */
 			if (pthread_sigmask(SIG_UNBLOCK, &set, NULL) != 0) {
 				panic("can't set thread signal mask: %s", strerror(errno));
 			}
+#endif
 
 			/* processor initialization */
 			P::init();

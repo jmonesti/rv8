@@ -31,20 +31,29 @@
 
 #include "dense_hash_map"
 
-#include <poll.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <libgen.h>
+
+#if ! defined __MINGW32__
+#include <poll.h>
 #include <termios.h>
+
 #include <sys/uio.h>
 #include <sys/mman.h>
-#include <sys/stat.h>
 #include <sys/wait.h>
-#include <sys/time.h>
 #include <sys/times.h>
 #include <sys/ioctl.h>
 #include <sys/utsname.h>
 #include <sys/resource.h>
+#else
+#include <signal.h>
+
+typedef struct { } siginfo_t;
+#endif
+
+#include <sys/stat.h>
+#include <sys/time.h>
 
 #include "host-endian.h"
 #include "types.h"

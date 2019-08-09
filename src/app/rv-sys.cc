@@ -34,11 +34,18 @@
 
 #include "dense_hash_map"
 
-#include <poll.h>
 #include <fcntl.h>
 #include <unistd.h>
+
+#if ! defined __MINGW32__
+#include <poll.h>
+
 #include <termios.h>
 #include <sys/mman.h>
+#else
+typedef struct { } siginfo_t;
+#endif
+
 #include <sys/stat.h>
 #include <sys/time.h>
 
