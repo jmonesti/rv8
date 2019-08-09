@@ -266,10 +266,17 @@ namespace riscv {
 				AT_PHENT, elf.ehdr.e_phentsize,
 				AT_PAGESZ, page_size,
 				AT_RANDOM, random_data,
+#if ! defined __MINGW32__
 				AT_UID, getuid(),
 				AT_EUID, geteuid(),
 				AT_GID, getgid(),
 				AT_EGID, getegid(),
+#else
+				AT_UID, 0,
+				AT_EUID, 0,
+				AT_GID, 0,
+				AT_EGID, 0,
+#endif
 				AT_NULL, 0
 			};
 
