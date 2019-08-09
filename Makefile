@@ -33,12 +33,12 @@ AR :=           $(shell which ar)
 check_cxx_opt = $(shell T=$$(mktemp /tmp/test.XXXX); \
                 echo 'int main() { return 0; }' > $$T.$(2) ; \
                 $(1) $(3) $$T.$(2) -o /dev/null >/dev/null 2>&1 ; \
-                echo $$?; rm $$T $$T.$(2))
+                echo $$?; rm $$T $$T.$(2) >/dev/null 2>&1)
 check_ld_opt =  $(shell T=$$(mktemp /tmp/test.XXXX); \
                 echo 'int main() { return 0; }' > $$T.$(2) ; \
                 $(1) -c $$T.$(2) -o $$T.o  >/dev/null 2>&1 ; \
                 $(1) $(3) $$T.o -o /dev/null >/dev/null 2>&1 ; \
-                echo $$?; rm $$T $$T.$(2) $$T.o)
+                echo $$?; rm $$T $$T.$(2) $$T.o >/dev/null 2>&1)
 
 # compiler flag test definitions
 LIBCPP_FLAGS =  -stdlib=libc++
@@ -50,7 +50,7 @@ RELROF_FLAGS =  -Wl,-z,relro,-z,now
 NOEXEC_FLAGS =  -Wl,-z,noexecstack
 
 # default optimizer, debug and warning flags
-TOP_DIR =       $(shell pwd)
+TOP_DIR =       .
 ASMJIT_SRC_DIR = third_party/asmjit/src
 INCLUDES :=     -I$(TOP_DIR)/src/abi \
                 -I$(TOP_DIR)/src/asm \
@@ -68,7 +68,7 @@ INCLUDES :=     -I$(TOP_DIR)/src/abi \
 OPT_FLAGS =     -O3 -fwrapv
 DEBUG_FLAGS =   -g
 WARN_FLAGS =    -Wall -Wsign-compare -Wno-deprecated-declarations -Wno-strict-aliasing
-CPPFLAGS =
+CPPFLAGS =      -DASMJIT_STATIC -DX86_NO_RDTSCP
 CFLAGS =        $(DEBUG_FLAGS) $(OPT_FLAGS) $(WARN_FLAGS) $(INCLUDES)
 CCFLAGS =       -std=c11 -D_DEFAULT_SOURCE $(CFLAGS)
 CXXFLAGS =      -std=c++1y -fno-rtti -fno-exceptions $(CFLAGS)
