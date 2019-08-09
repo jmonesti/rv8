@@ -41,6 +41,7 @@ namespace riscv {
 			if (P::log & proc_log_exit_log_stats) {
 
 				/* reopen console if necessary */
+#if ! defined __MINGW32__
 				struct pollfd pfd[3] = { { .fd=fileno(stdout) } };
 				poll(pfd, 1, 0);
 				if (pfd[0].revents & POLLNVAL) {
@@ -48,6 +49,7 @@ namespace riscv {
 					if (fd < 0) ::exit(rc);
 					if (dup2(fd, fileno(stdout)) < 0) ::exit(rc);
 				}
+#endif
 
 				/* print integer register file */
 				printf("\n");
