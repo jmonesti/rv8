@@ -20,6 +20,10 @@ namespace riscv {
 		addr_t imagebase;
 		std::string stats_dirname;
 
+		processor_proxy() :
+		    imagebase(0)
+		{}
+
 		const char* name() { return "rv-sim"; }
 
 		void init() {}
