@@ -21,7 +21,7 @@ namespace riscv {
 		std::string stats_dirname;
 
 		processor_proxy() :
-		    imagebase(0)
+			imagebase(0)
 		{}
 
 		const char* name() { return "rv-sim"; }
@@ -204,11 +204,13 @@ namespace riscv {
 		/* Map a single stack segment into user address space */
 		void map_proxy_stack(addr_t stack_top, size_t stack_size)
 		{
+#if ! defined __MINGW32__
 			void *addr = guest_mmap((void*)(stack_top - stack_size), stack_size,
 				PROT_READ | PROT_WRITE, MAP_FIXED | MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
 			if (addr == MAP_FAILED) {
 				panic("map_proxy_stack: error: mmap: %s", strerror(errno));
 			}
+#endif
 
 			/* keep track of the mapped segment and set the stack_top */
 			P::mmu.mem->segments.push_back(std::pair<void*,size_t>((void*)(stack_top - stack_size), stack_size));
@@ -220,6 +222,20 @@ namespace riscv {
 					(stack_top - stack_size), stack_top);
 			}
 		}
+
+#if defined __MINGW32__
+		void * memcpy(void * dest, void * src, size_t n)
+		{
+			P::mmu.template store<P,u8>(*this, (typename P::ux)(uintptr_t)dest, (u8*)src, n);
+			return dest;
+		}
+
+		void * memset(void * s, int c, size_t n)
+		{
+			P::mmu.template store<P,u8>(*this, (typename P::ux)(uintptr_t)s, (u8)c, n);
+			return s;
+		}
+#endif
 
 		void copy_to_proxy_stack(addr_t stack_top, size_t stack_size, void *data, size_t len)
 		{
@@ -333,6 +349,7 @@ namespace riscv {
 			addr_t brk = addr_t(phdr.p_vaddr + voffset + phdr.p_memsz);
 			if (!imagebase) imagebase = map_vaddr;
 
+#if ! defined __MINGW32__
 			/* map the segment */
 			void *addr = guest_mmap((void*)map_vaddr, map_len,
 				elf_p_flags_mmap(phdr.p_flags), MAP_FIXED | MAP_PRIVATE, fd, map_offset);
@@ -340,6 +357,12 @@ namespace riscv {
 			if (addr == MAP_FAILED) {
 				panic("map_executable: error: mmap: %s: %s", filename, strerror(errno));
 			}
+#else
+			/* segment already 'mapped' */
+			lseek(fd, map_offset, SEEK_SET );
+			read(fd, (void*)P::mmu.template base<P>(map_vaddr), map_len);
+			close(fd);
+#endif
 
 			/* erase trailing bytes past the end of the mapping */
 			if ((phdr.p_flags & PF_W) && phdr.p_memsz > phdr.p_filesz) {

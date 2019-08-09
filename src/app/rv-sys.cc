@@ -162,6 +162,7 @@ struct rv_emulator
 
 	rv_emulator() : cpu(host_cpu::get_instance()) {}
 
+#if ! defined __MINGW32__
 	static const int elf_p_flags_mmap(int v)
 	{
 		int prot = 0;
@@ -170,6 +171,7 @@ struct rv_emulator
 		if (v & PF_R) prot |= PROT_READ;
 		return prot;
 	}
+#endif
 
 	static const int elf_pma_flags(int v)
 	{
@@ -194,12 +196,22 @@ struct rv_emulator
 		addr_t map_vaddr = phdr.p_vaddr - map_delta;
 		addr_t map_len = round_up(phdr.p_memsz + map_delta, page_size);
 
+#if ! defined __MINGW32__
 		void *addr = mmap(nullptr, map_len,
 			elf_p_flags_mmap(phdr.p_flags), MAP_PRIVATE, fd, map_offset);
 		close(fd);
 		if (addr == MAP_FAILED) {
 			panic("map_executable: error: mmap: %s: %s", filename, strerror(errno));
 		}
+#else
+		void *addr = malloc(map_len);
+		if (addr == nullptr) {
+			panic("map_executable: error: mmap: %s: %s", filename, strerror(errno));
+		}
+		lseek(fd, map_offset, SEEK_SET);
+		read(fd, addr, map_len);
+		close(fd);
+#endif
 
 		/* zero bss */
 		if ((phdr.p_flags & PF_W) && phdr.p_memsz > phdr.p_filesz) {

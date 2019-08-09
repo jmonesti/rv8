@@ -99,12 +99,39 @@ namespace riscv {
 		bool use_mmu;
 		Label start, term;
 
+		// Linux / Win64 ABI-related
+		typedef void(*abi_shadow_func_t)(X86Assembler &);
+		abi_shadow_func_t abi_do_shadow, abi_undo_shadow;
+		X86Gp abi_arg1, abi_arg2;
+
 		jit_emitter_rv32(P &proc, CodeHolder &code, mmu_ops &ops, TraceLookup lookup_trace_slow, TraceLookup lookup_trace_fast)
 			: proc(proc), as(&code), code(code), ops(ops),
 			  lookup_trace_slow(lookup_trace_slow),
 			  lookup_trace_fast(lookup_trace_fast),
-			  term_pc(0), instret(0), use_mmu(false)
+			  term_pc(0), instret(0), use_mmu(static_cast<bool>(ASMJIT_OS_WINDOWS)),
+
+			  // Linux / Win64 ABI-related
+			  abi_do_shadow(static_cast<bool>(ASMJIT_OS_WINDOWS) ? abi_shadow_do : abi_shadow_nop),
+			  abi_undo_shadow(static_cast<bool>(ASMJIT_OS_WINDOWS) ? abi_shadow_undo : abi_shadow_nop),
+			  abi_arg1(static_cast<bool>(ASMJIT_OS_WINDOWS) ? x86::rcx : x86::rdi),
+			  abi_arg2(static_cast<bool>(ASMJIT_OS_WINDOWS) ? x86::rdx : x86::rsi)
 		{}
+
+		// Win64 ABI specifies a 'shadow space' -allowing callees to spill their arguments
+		static void abi_shadow_do(X86Assembler &as)
+		{
+			as.sub(x86::rsp, 0x20);
+		}
+
+		static void abi_shadow_undo(X86Assembler &as)
+		{
+			as.add(x86::rsp, 0x20);
+		}
+
+		// Linux ABI has no notion of 'shadow space'
+		static void abi_shadow_nop(X86Assembler &as)
+		{
+		}
 
 		void log_trace(const char* fmt, ...)
 		{
@@ -176,7 +203,7 @@ namespace riscv {
 				as.push(x86::rbx);
 			}
 			as.push(x86::rbp);
-			as.mov(x86::rbp, x86::rdi);
+			as.mov(x86::rbp, abi_arg1);
 			if (!proc.memory_registers) {
 				as.mov(x86::edx, rbp_reg_d(rv_ireg_ra));
 				as.mov(x86::ebx, rbp_reg_d(rv_ireg_sp));
@@ -263,8 +290,10 @@ namespace riscv {
 				as.mov(rbp_reg_d(rv_ireg_a2), x86::r10d);
 				as.mov(rbp_reg_d(rv_ireg_a3), x86::r11d);
 			}
-			as.mov(x86::rdi, x86::rax);
+			as.mov(abi_arg1, x86::rax);
+			abi_do_shadow(as);
 			as.call(Imm(func_address(lookup_trace_slow)));
+			abi_undo_shadow(as);
 			as.test(x86::rax, x86::rax);
 			as.jz(lookup_fail);
 			as.mov(x86::ecx, x86::dword_ptr(x86::rbp, proc_offset(pc)));
@@ -309,26 +338,30 @@ namespace riscv {
 
 		void save_volatile()
 		{
-			if (proc.memory_registers) return;
-			as.mov(rbp_reg_d(rv_ireg_ra), x86::edx);
-			as.mov(rbp_reg_d(rv_ireg_t0), x86::esi);
-			as.mov(rbp_reg_d(rv_ireg_t1), x86::edi);
-			as.mov(rbp_reg_d(rv_ireg_a0), x86::r8d);
-			as.mov(rbp_reg_d(rv_ireg_a1), x86::r9d);
-			as.mov(rbp_reg_d(rv_ireg_a2), x86::r10d);
-			as.mov(rbp_reg_d(rv_ireg_a3), x86::r11d);
+			if (!proc.memory_registers) {
+				as.mov(rbp_reg_d(rv_ireg_ra), x86::edx);
+				as.mov(rbp_reg_d(rv_ireg_t0), x86::esi);
+				as.mov(rbp_reg_d(rv_ireg_t1), x86::edi);
+				as.mov(rbp_reg_d(rv_ireg_a0), x86::r8d);
+				as.mov(rbp_reg_d(rv_ireg_a1), x86::r9d);
+				as.mov(rbp_reg_d(rv_ireg_a2), x86::r10d);
+				as.mov(rbp_reg_d(rv_ireg_a3), x86::r11d);
+			}
+			abi_do_shadow(as);
 		}
 
 		void restore_volatile()
 		{
-			if (proc.memory_registers) return;
-			as.mov(x86::edx, rbp_reg_d(rv_ireg_ra));
-			as.mov(x86::esi, rbp_reg_d(rv_ireg_t0));
-			as.mov(x86::edi, rbp_reg_d(rv_ireg_t1));
-			as.mov(x86::r8d, rbp_reg_d(rv_ireg_a0));
-			as.mov(x86::r9d, rbp_reg_d(rv_ireg_a1));
-			as.mov(x86::r10d, rbp_reg_d(rv_ireg_a2));
-			as.mov(x86::r11d, rbp_reg_d(rv_ireg_a3));
+			abi_undo_shadow(as);
+			if (!proc.memory_registers) {
+				as.mov(x86::edx, rbp_reg_d(rv_ireg_ra));
+				as.mov(x86::esi, rbp_reg_d(rv_ireg_t0));
+				as.mov(x86::edi, rbp_reg_d(rv_ireg_t1));
+				as.mov(x86::r8d, rbp_reg_d(rv_ireg_a0));
+				as.mov(x86::r9d, rbp_reg_d(rv_ireg_a1));
+				as.mov(x86::r10d, rbp_reg_d(rv_ireg_a2));
+				as.mov(x86::r11d, rbp_reg_d(rv_ireg_a3));
+			}
 		}
 
 		mmu_ops create_load_store(JitRuntime &rt)
@@ -337,7 +370,7 @@ namespace riscv {
 			as.align(kAlignCode, 16);
 			as.bind(lb);
 			save_volatile();
-			as.mov(x86::rdi, x86::rax);
+			as.mov(abi_arg1, x86::rax);
 			as.call(Imm(func_address(ops.lb)));
 			restore_volatile();
 			as.ret();
@@ -346,7 +379,7 @@ namespace riscv {
 			as.align(kAlignCode, 16);
 			as.bind(lh);
 			save_volatile();
-			as.mov(x86::rdi, x86::rax);
+			as.mov(abi_arg1, x86::rax);
 			as.call(Imm(func_address(ops.lh)));
 			restore_volatile();
 			as.ret();
@@ -355,7 +388,7 @@ namespace riscv {
 			as.align(kAlignCode, 16);
 			as.bind(lw);
 			save_volatile();
-			as.mov(x86::rdi, x86::rax);
+			as.mov(abi_arg1, x86::rax);
 			as.call(Imm(func_address(ops.lw)));
 			restore_volatile();
 			as.ret();
@@ -364,8 +397,8 @@ namespace riscv {
 			as.align(kAlignCode, 16);
 			as.bind(sb);
 			save_volatile();
-			as.mov(x86::rdi, x86::rax);
-			as.mov(x86::rsi, x86::rcx);
+			as.mov(abi_arg2, x86::rcx);
+			as.mov(abi_arg1, x86::rax);
 			as.call(Imm(func_address(ops.sb)));
 			restore_volatile();
 			as.ret();
@@ -374,8 +407,8 @@ namespace riscv {
 			as.align(kAlignCode, 16);
 			as.bind(sh);
 			save_volatile();
-			as.mov(x86::rdi, x86::rax);
-			as.mov(x86::rsi, x86::rcx);
+			as.mov(abi_arg2, x86::rcx);
+			as.mov(abi_arg1, x86::rax);
 			as.call(Imm(func_address(ops.sh)));
 			restore_volatile();
 			as.ret();
@@ -384,8 +417,8 @@ namespace riscv {
 			as.align(kAlignCode, 16);
 			as.bind(sw);
 			save_volatile();
-			as.mov(x86::rdi, x86::rax);
-			as.mov(x86::rsi, x86::rcx);
+			as.mov(abi_arg2, x86::rcx);
+			as.mov(abi_arg1, x86::rax);
 			as.call(Imm(func_address(ops.sw)));
 			restore_volatile();
 			as.ret();

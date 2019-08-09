@@ -36,16 +36,40 @@ namespace riscv {
 		typedef std::shared_ptr<MEMORY> memory_type;
 
 		enum : addr_t {
+#if ! defined __MINGW32__
 			memory_top = (sizeof(UX) == 4 ? 0x80000000 : 0x7f0000000000),
+#else
+			// rv64 : mingw does not support such a huge malloc
+			memory_top = (sizeof(UX) == 4 ? 0x80000000 : 0x80000000),
+#endif
 			stack_size = 0x100000 // 1 MiB
 		};
 
 		memory_type mem;
 
+#if ! defined __MINGW32__
 		/* MMU constructor */
 
 		mmu_proxy() : mem(std::make_shared<MEMORY>()) {}
 		mmu_proxy(memory_type mem) : mem(mem) {}
+#else
+		addr_t m;
+
+		/* MMU constructor */
+
+		mmu_proxy()
+			: mem(std::make_shared<MEMORY>()),
+			  m((addr_t) calloc(1, memory_top))
+		{}
+		mmu_proxy(memory_type mem)
+			: mem(mem),
+			  m((addr_t) calloc(1, memory_top))
+		{}
+		~mmu_proxy()
+		{
+			free((void*)m);
+		}
+#endif
 
 		template <typename P> inst_t inst_fetch(P &proc, UX pc, typename P::ux &pc_offset)
 		{
@@ -64,7 +88,11 @@ namespace riscv {
 					}
 				}
 			}
+#if ! defined __MINGW32__
 			return riscv::inst_fetch(pc, pc_offset);
+#else
+			return riscv::inst_fetch(m + pc, pc_offset);
+#endif
 		}
 
 		/* Note: in this simple proxy MMU model, stores beyond memory top wrap */
@@ -72,28 +100,80 @@ namespace riscv {
 		template <typename P, typename T>
 		void amo(P &proc, const amo_op a_op, UX va, T &val1, T val2)
 		{
+#if ! defined __MINGW32__
 			val1 = UX(*(T*)addr_t(va & (memory_top - 1)));
+#else
+			val1 = UX(*(T*)addr_t(m + (va & (memory_top - 1))));
+#endif
 			val2 = amo_fn<UX>(a_op, val1, val2);
+#if ! defined __MINGW32__
 			*((T*)addr_t(va & (memory_top - 1))) = val2;
+#else
+			*((T*)addr_t(m + (va & (memory_top - 1)))) = val2;
+#endif
 		}
 
 		template <typename P, typename T> void load(P &proc, UX va, T &val)
 		{
 			if (enfore_memory_top) {
+#if ! defined __MINGW32__
 				val = UX(*(T*)addr_t(va & (memory_top - 1)));
+#else
+				val = UX(*(T*)addr_t(m + (va & (memory_top - 1))));
+#endif
 			} else {
+#if ! defined __MINGW32__
 				val = UX(*(T*)addr_t(va));
+#else
+				val = UX(*(T*)addr_t(m + va));
+#endif
 			}
 		}
 
 		template <typename P, typename T> void store(P &proc, UX va, T val)
 		{
 			if (enfore_memory_top) {
+#if ! defined __MINGW32__
 				*((T*)addr_t(va & (memory_top - 1))) = val;
+#else
+				*((T*)addr_t(m + (va & (memory_top - 1)))) = val;
+#endif
 			} else {
+#if ! defined __MINGW32__
 				*((T*)addr_t(va)) = val;
+#else
+				*((T*)addr_t(m + va)) = val;
+#endif
 			}
 		}
+
+#if defined __MINGW32__
+		// ~memcpy (from host to guest)
+		template <typename P, typename T> void store(P &proc, UX va, T *val, size_t n)
+		{
+			for (size_t i=0; i<n; va+=sizeof(T), ++i ) {
+				store<P,T>(proc, va, val[i]);
+			}
+		}
+
+		// ~memset (to guest)
+		template <typename P, typename T> void store(P &proc, UX va, T val, size_t n)
+		{
+			for (size_t i=0; i<n; va+=sizeof(T), ++i ) {
+				store<P,T>(proc, va, val);
+			}
+		}
+
+		template <typename P> addr_t base() const
+		{
+			return m;
+		}
+
+		template <typename P> addr_t base(UX va) const
+		{
+			return base<P>() + va;
+		}
+#endif
 	};
 
 	using mmu_proxy_rv32 = mmu_proxy<u32>;

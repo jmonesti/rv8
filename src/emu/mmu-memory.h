@@ -68,7 +68,11 @@ namespace riscv {
 
 		~mmap_memory_segment()
 		{
+#if ! defined __MINGW32__
 			munmap((void*)memory_segment<UX>::uva, memory_segment<UX>::size);
+#else
+			free((void*)memory_segment<UX>::uva);
+#endif
 		}
 
 		virtual buserror_t load_8 (UX va, u8  &val) { val = *static_cast<u8*>((void*)(addr_t)va); return 0; }
@@ -135,9 +139,14 @@ namespace riscv {
 		/* mmap new main memory segment using fixed user physical address and size */
 		void add_ram(UX mpa, size_t size)
 		{
+#if ! defined __MINGW32__
 			void *addr = mmap(nullptr, size,
 				PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
 			if (addr == MAP_FAILED) {
+#else
+			void *addr = malloc(size);
+			if (addr == nullptr) {
+#endif
 				panic("memory: error: mmap: %s", strerror(errno));
 			}
 			add_segment(std::make_shared<mmap_memory_segment<UX>>("RAM", mpa, uintptr_t(addr), size,
