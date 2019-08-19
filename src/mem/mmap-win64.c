@@ -17,9 +17,6 @@ static uintptr_t map_base = 0x7fff00000000UL;
 static mmap_fn real_mmap = NULL;
 static munmap_fn real_munmap = NULL;
 
-// pre-declaration
-int munmap(void *addr, size_t len);
-
 void* mmap_win64(void *addr, size_t len, int prot, int flags, int fd, off_t offset)
 {
 	printf( "addr=%p len=%lu prot=0x%x flags=0x%x fd=%d offset=%lu\n",
@@ -68,7 +65,7 @@ int guest_munmap(void *addr, size_t len)
 void* guest_mmap(void *addr, size_t len, int prot, int flags, int fd, off_t offset)
 {
 	if (!real_mmap) {
-		*(void **)(&real_mmap) = mmap_win64;
+		real_mmap = mmap_win64;
 	}
 	return __guest_mmap(real_mmap, addr, len, prot, flags, fd, offset);
 }
@@ -76,7 +73,7 @@ void* guest_mmap(void *addr, size_t len, int prot, int flags, int fd, off_t offs
 void* mmap(void *addr, size_t len, int prot, int flags, int fd, off_t offset)
 {
 	if (!real_mmap) {
-		*(void **)(&real_mmap) = mmap_win64;
+		real_mmap = mmap_win64;
 	}
 	size_t incr = 0;
 	if (addr == 0) {
@@ -91,7 +88,7 @@ void* mmap(void *addr, size_t len, int prot, int flags, int fd, off_t offset)
 int munmap(void *addr, size_t len)
 {
 	if (!real_munmap) {
-		*(void **)(&real_mmap) = munmap_win64;
+		real_munmap = munmap_win64;
 	}
 	return real_munmap(addr, len);
 }

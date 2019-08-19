@@ -19,6 +19,9 @@
 #define MAP_ANONYMOUS 0x20
 
 #define MAP_FAILED ((void*) -1)
+
+void* mmap(void *addr, size_t len, int prot, int flags, int fd, off_t offset);
+int munmap(void *addr, size_t len);
 #endif
 
 #ifdef __cplusplus
